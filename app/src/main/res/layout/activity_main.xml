@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="24dp"
+            android:paddingBottom="32dp">
+
+            <TextView
+                android:id="@+id/faceLabel"
+                style="@style/ShakeClockSectionHeader"
+                android:text="@string/settings_face" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/faceToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/faceDigital"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/face_digital" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/faceAnalog"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/face_analog" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <TextView
+                android:id="@+id/dateLabel"
+                style="@style/ShakeClockSectionHeader"
+                android:text="@string/settings_date" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/dateToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dateDayMonth"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/date_day_month" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dateMonthDay"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/date_month_day" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <TextView
+                android:id="@+id/timeLabel"
+                style="@style/ShakeClockSectionHeader"
+                android:text="@string/settings_time" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/timeToggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/timeSystem"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/time_system" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/time12"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/time_12" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/time24"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/time_24" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+
+            <TextView
+                android:id="@+id/thresholdLabel"
+                style="@style/ShakeClockSectionHeader"
+                android:text="@string/settings_shake" />
+
+            <TextView
+                android:id="@+id/thresholdValue"
+                style="@style/ShakeClockBigValue"
+                android:layout_marginTop="4dp" />
+
+            <com.google.android.material.slider.Slider
+                android:id="@+id/thresholdSlider"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:valueFrom="8"
+                android:valueTo="60"
+                android:stepSize="1"
+                android:value="26"
+                app:labelBehavior="gone" />
+
+            <TextView
+                android:id="@+id/temperatureLabel"
+                style="@style/ShakeClockSectionHeader"
+                android:text="@string/settings_temperature" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/temperatureSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/temperature_show" />
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/unitToggle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                app:selectionRequired="true"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/unitCelsius"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/unit_celsius" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/unitFahrenheit"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/unit_fahrenheit" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

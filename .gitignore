@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+.kotlin/
+build/
+app/build/
+
+# Android Studio / IDE
+.idea/
+*.iml
+local.properties
+
+# macOS
+.DS_Store
+
+# NDK / native
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Release signing (never commit these)
+keystore.properties
+*.jks
+*.keystore
+
+# Build outputs for release uploads
+dist/

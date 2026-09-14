@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Shake Clock</string>
+    <string name="toy_name">Shake Clock</string>
+    <string name="toy_summary">Shake to show the time, date or temperature</string>
+    <string name="settings_face">Clock face</string>
+    <string name="face_digital">Digital</string>
+    <string name="face_analog">Analogue</string>
+    <string name="settings_date">Date format</string>
+    <string name="date_day_month">DD / MM</string>
+    <string name="date_month_day">MM / DD</string>
+    <string name="settings_time">Time format</string>
+    <string name="time_system">System</string>
+    <string name="time_12">12-hour</string>
+    <string name="time_24">24-hour</string>
+    <string name="settings_shake">Shake threshold</string>
+    <string name="threshold_value">%1$d m/s²</string>
+    <string name="settings_temperature">Temperature</string>
+    <string name="temperature_show">Show temperature</string>
+    <string name="unit_celsius">°C</string>
+    <string name="unit_fahrenheit">°F</string>
+    <string name="location_denied">Location permission is needed for the temperature section.</string>
+</resources>
