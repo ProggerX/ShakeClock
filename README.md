@@ -24,6 +24,8 @@ Shake again while it is lit to cycle through the enabled sections.
 - Digital or analogue clock face.
 - Date section (`DD / MM` or `MM / DD`).
 - Optional temperature section via [Open-Meteo](https://open-meteo.com/) with `°C` / `°F`.
+- Optional **Glyph Museum** animation section: import frame JSON, tick which ones to cycle.
+- Idle display modes: `Off` (dark until shaken), `Animation` (idle plays the animation), `Keep` (idle keeps the last section).
 - 12-hour / 24-hour / system time format.
 - "Nothing style" Material 3 UI with Monét (Material You) dynamic colors and an NDot header.
 - Everything is configured in-app and stored in `SharedPreferences`.
@@ -48,6 +50,8 @@ ShakeClock/
 │       │   ├── ShakeClockApp.kt          dynamic color (Monét) application
 │       │   ├── MainActivity.kt           Material 3 settings UI
 │       │   ├── ShakeClockToyService.kt   AOD glyph toy (shake + rendering)
+│       │   ├── GlyphAnimation.kt         Glyph Museum JSON parser
+│       │   ├── AnimationStore.kt         imported animations + selection
 │       │   ├── ToySettings.kt            SharedPreferences
 │       │   └── WeatherRepository.kt      Open-Meteo temperature
 │       └── res/ ...                      layouts, drawables, strings
@@ -100,6 +104,21 @@ open it manually:
 
 Then shake the phone.
 
+### Glyph Museum animations
+
+The Glyph Museum app keeps its frames private (not debuggable, scoped storage),
+so this toy can't read them directly. Instead, import exported frame data:
+
+1. On [editor.glyphmuseum.com](https://editor.glyphmuseum.com) pick the **Phone 4a**
+   profile and design an animation.
+2. Export the **Data** tab as **JSON** (`{"v":4,"frames":[{"d":..,"p":[137 values]}]}`).
+3. In Shake Clock, tap **Import JSON** and pick the file. Import as many as you like.
+4. Tick the animations you want included in the single **Animation** section. Shake
+   cycles: time → date → temperature (if on) → animation, and the animation section
+   plays the ticked animations in sequence.
+
+`Remove all` clears every imported animation.
+
 ### Warnings and disclaimers
 
 - **Vibecoded, untested, unmaintained.** No tests exist. No warranty of any kind.
@@ -144,6 +163,10 @@ Always-On Glyph-игрушка для **Nothing Phone (4a) Pro** (`Glyph.DEVICE_
 - Цифровые или аналоговые часы.
 - Секция даты (`ДД / ММ` или `ММ / ДД`).
 - Необязательная секция температуры через [Open-Meteo](https://open-meteo.com/) с `°C` / `°F`.
+- Необязательная секция анимаций **Glyph Museum**: импорт JSON с кадрами и выбор,
+  какие из них крутить по кругу.
+- Режимы простоя: `Off` (темно до встряхивания), `Animation` (в простое играет
+  анимация), `Keep` (в простое остаётся последняя секция).
 - Формат времени 12 / 24 часа / системный.
 - UI в стиле Nothing на Material 3 с динамическими цветами Monét (Material You)
   и заголовком шрифтом NDot.
@@ -194,6 +217,23 @@ nix develop -c adb install -r app/build/outputs/apk/debug/app-debug.apk
 **Настройки → Glyph Interface → Flip to Glyph → Always-on Glyph Toy → Shake Clock**
 
 После этого тряси телефон.
+
+### Анимации Glyph Museum
+
+Приложение Glyph Museum хранит кадры приватно (не debuggable, scoped storage),
+поэтому игрушка не может прочитать их напрямую. Вместо этого импортируй
+экспортированные данные:
+
+1. На [editor.glyphmuseum.com](https://editor.glyphmuseum.com) выбери профиль
+   **Phone 4a** и нарисуй анимацию.
+2. Экспортируй вкладку **Data** как **JSON** (`{"v":4,"frames":[{"d":..,"p":[137 значений]}]}`).
+3. В Shake Clock нажми **Import JSON** и выбери файл. Импортировать можно сколько
+   угодно анимаций.
+4. Отметь галочками те, что должны попасть в единую секцию **Animation**.
+   Встряхивание переключает: время → дата → температура (если включена) →
+   анимация, а секция анимации проигрывает отмеченные анимации по очереди.
+
+`Remove all` удаляет все импортированные анимации.
 
 ### Предупреждения и отказ от ответственности
 

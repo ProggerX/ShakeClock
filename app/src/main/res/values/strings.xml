@@ -12,11 +12,27 @@
     <string name="time_system">System</string>
     <string name="time_12">12-hour</string>
     <string name="time_24">24-hour</string>
+    <string name="settings_idle">Idle display</string>
+    <string name="idle_off">Off</string>
+    <string name="idle_animation">Animation</string>
+    <string name="idle_keep">Keep</string>
     <string name="settings_shake">Shake threshold</string>
     <string name="threshold_value">%1$d m/s²</string>
     <string name="settings_temperature">Temperature</string>
     <string name="temperature_show">Show temperature</string>
     <string name="unit_celsius">°C</string>
     <string name="unit_fahrenheit">°F</string>
+    <string name="settings_museum">Glyph Museum</string>
+    <string name="animation_empty">No animations imported. Export a frame as JSON from editor.glyphmuseum.com, then import it here.</string>
+    <string name="animation_import">Import JSON</string>
+    <string name="animation_remove_all">Remove all</string>
+    <plurals name="animation_frames">
+        <item quantity="one">%1$d frame</item>
+        <item quantity="other">%1$d frames</item>
+    </plurals>
+    <string name="animation_entry">%1$s · %2$s</string>
+    <string name="animation_default_name">glyphmuseum</string>
+    <string name="animation_invalid">Could not parse that animation file</string>
+    <string name="animation_imported">Imported %1$s</string>
     <string name="location_denied">Location permission is needed for the temperature section.</string>
 </resources>

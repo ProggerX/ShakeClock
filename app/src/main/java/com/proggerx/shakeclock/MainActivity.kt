@@ -3,11 +3,14 @@ package com.proggerx.shakeclock
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
+import android.provider.OpenableColumns
 import android.text.Spannable
 import android.text.SpannableString
 import android.text.style.TypefaceSpan
 import android.view.View
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,20 +18,27 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.slider.Slider
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var settings: ToySettings
+    private lateinit var animationStore: AnimationStore
+
     private lateinit var faceToggle: MaterialButtonToggleGroup
     private lateinit var dateToggle: MaterialButtonToggleGroup
     private lateinit var timeToggle: MaterialButtonToggleGroup
+    private lateinit var idleToggle: MaterialButtonToggleGroup
     private lateinit var unitToggle: MaterialButtonToggleGroup
     private lateinit var temperatureSwitch: MaterialSwitch
     private lateinit var thresholdSlider: Slider
     private lateinit var thresholdValue: TextView
+    private lateinit var animationList: LinearLayout
+    private lateinit var animationEmpty: TextView
 
     private val locationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -39,6 +49,11 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    private val pickAnimation =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) importAnimation(uri)
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -47,21 +62,27 @@ class MainActivity : AppCompatActivity() {
 
         applyInsets()
         settings = ToySettings(this)
+        animationStore = AnimationStore(this)
 
         faceToggle = findViewById(R.id.faceToggle)
         dateToggle = findViewById(R.id.dateToggle)
         timeToggle = findViewById(R.id.timeToggle)
+        idleToggle = findViewById(R.id.idleToggle)
         unitToggle = findViewById(R.id.unitToggle)
         temperatureSwitch = findViewById(R.id.temperatureSwitch)
         thresholdSlider = findViewById(R.id.thresholdSlider)
         thresholdValue = findViewById(R.id.thresholdValue)
+        animationList = findViewById(R.id.animationList)
+        animationEmpty = findViewById(R.id.animationEmpty)
 
         applyNdot()
         bindFace()
         bindDate()
         bindTime()
+        bindIdle()
         bindThreshold()
         bindTemperature()
+        bindAnimations()
     }
 
     private fun applyInsets() {
@@ -83,8 +104,10 @@ class MainActivity : AppCompatActivity() {
             R.id.faceLabel,
             R.id.dateLabel,
             R.id.timeLabel,
+            R.id.idleLabel,
             R.id.thresholdLabel,
             R.id.temperatureLabel,
+            R.id.animationLabel,
         )) {
             findViewById<TextView>(id).typeface = ndot
         }
@@ -137,6 +160,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun bindIdle() {
+        idleToggle.check(
+            when (settings.idleMode) {
+                IdleMode.ANIMATION -> R.id.idleAnimation
+                IdleMode.PERSISTENT -> R.id.idleKeep
+                IdleMode.OFF -> R.id.idleOff
+            }
+        )
+        idleToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            settings.idleMode = when (checkedId) {
+                R.id.idleAnimation -> IdleMode.ANIMATION
+                R.id.idleKeep -> IdleMode.PERSISTENT
+                else -> IdleMode.OFF
+            }
+        }
+    }
+
     private fun bindThreshold() {
         val value = settings.shakeThreshold.coerceIn(THRESHOLD_MIN, THRESHOLD_MAX)
         thresholdSlider.value = value
@@ -170,6 +211,66 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    private fun bindAnimations() {
+        findViewById<MaterialButton>(R.id.importAnimationButton).setOnClickListener {
+            pickAnimation.launch(arrayOf("application/json", "text/plain", "*/*"))
+        }
+        findViewById<MaterialButton>(R.id.removeAnimationsButton).setOnClickListener {
+            animationStore.removeAll()
+            refreshAnimationList()
+        }
+        refreshAnimationList()
+    }
+
+    private fun refreshAnimationList() {
+        val entries = animationStore.entries()
+        animationList.removeAllViews()
+        animationEmpty.visibility = if (entries.isEmpty()) View.VISIBLE else View.GONE
+        for (entry in entries) {
+            val checkBox = MaterialCheckBox(this)
+            checkBox.text = getString(
+                R.string.animation_entry,
+                entry.name,
+                resources.getQuantityString(
+                    R.plurals.animation_frames,
+                    entry.frameCount,
+                    entry.frameCount,
+                ),
+            )
+            checkBox.isChecked = entry.selected
+            checkBox.setOnCheckedChangeListener { _, checked ->
+                animationStore.setSelected(entry.id, checked)
+            }
+            animationList.addView(checkBox)
+        }
+    }
+
+    private fun importAnimation(uri: Uri) {
+        val source = runCatching {
+            contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+        }.getOrNull()
+        val name = queryDisplayName(uri) ?: getString(R.string.animation_default_name)
+        val entry = source?.let { animationStore.import(name, it) }
+        if (entry == null) {
+            Toast.makeText(this, R.string.animation_invalid, Toast.LENGTH_LONG).show()
+            return
+        }
+        Toast.makeText(this, getString(R.string.animation_imported, entry.name), Toast.LENGTH_SHORT)
+            .show()
+        refreshAnimationList()
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        val cursor = contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        ) ?: return null
+        return cursor.use { if (it.moveToFirst()) it.getString(0) else null }
     }
 
     private fun setUnitEnabled(enabled: Boolean) {

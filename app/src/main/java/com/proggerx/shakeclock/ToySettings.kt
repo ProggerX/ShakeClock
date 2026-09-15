@@ -10,6 +10,8 @@ enum class DateStyle { DAY_MONTH, MONTH_DAY }
 
 enum class TimeStyle { SYSTEM, HOUR_12, HOUR_24 }
 
+enum class IdleMode { OFF, ANIMATION, PERSISTENT }
+
 class ToySettings(context: Context) {
 
     private val prefs = context.applicationContext
@@ -27,6 +29,10 @@ class ToySettings(context: Context) {
         get() = enumOrDefault(prefs.getString(KEY_TIME, null), TimeStyle.SYSTEM)
         set(value) = prefs.edit().putString(KEY_TIME, value.name).apply()
 
+    var idleMode: IdleMode
+        get() = enumOrDefault(prefs.getString(KEY_IDLE, null), IdleMode.OFF)
+        set(value) = prefs.edit().putString(KEY_IDLE, value.name).apply()
+
     var showTemperature: Boolean
         get() = prefs.getBoolean(KEY_TEMPERATURE, false)
         set(value) = prefs.edit().putBoolean(KEY_TEMPERATURE, value).apply()
@@ -38,6 +44,10 @@ class ToySettings(context: Context) {
     var shakeThreshold: Float
         get() = prefs.getFloat(KEY_THRESHOLD, DEFAULT_THRESHOLD)
         set(value) = prefs.edit().putFloat(KEY_THRESHOLD, value).apply()
+
+    var glyphAnimation: String?
+        get() = prefs.getString(KEY_ANIMATION, null)
+        set(value) = prefs.edit().putString(KEY_ANIMATION, value).apply()
 
     fun use24Hour(context: Context): Boolean = when (timeStyle) {
         TimeStyle.SYSTEM -> DateFormat.is24HourFormat(context)
@@ -62,9 +72,11 @@ class ToySettings(context: Context) {
         const val KEY_FACE = "clock_face"
         const val KEY_DATE = "date_style"
         const val KEY_TIME = "time_style"
+        const val KEY_IDLE = "idle_mode"
         const val KEY_TEMPERATURE = "show_temperature"
         const val KEY_FAHRENHEIT = "fahrenheit"
         const val KEY_THRESHOLD = "shake_threshold"
         const val DEFAULT_THRESHOLD = 26f
+        const val KEY_ANIMATION = "glyph_animation"
     }
 }

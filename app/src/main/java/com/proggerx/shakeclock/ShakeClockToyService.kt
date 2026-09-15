@@ -32,9 +32,14 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-private enum class DisplayMode { TIME, DATE, TEMP }
-
 class ShakeClockToyService : Service(), SensorEventListener {
+
+    private sealed interface Section {
+        data object Time : Section
+        data object Date : Section
+        data object Temperature : Section
+        data object Animation : Section
+    }
 
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -55,24 +60,65 @@ class ShakeClockToyService : Service(), SensorEventListener {
     private val messenger = Messenger(toyHandler)
 
     private lateinit var settings: ToySettings
+    private lateinit var animationStore: AnimationStore
     private var matrixManager: GlyphMatrixManager? = null
     private var sensorManager: SensorManager? = null
     private var accelerometer: Sensor? = null
     private var listening = false
 
     private var visible = false
-    private var displayMode = DisplayMode.TIME
+    private var windowActive = false
+    private var section: Section = Section.Time
     private var lastRenderedKey = ""
     private var lastShakeAt = 0L
     private val gravity = FloatArray(3)
 
-    private val hideRunnable = Runnable { hideDisplay() }
+    private var animating = false
+    private var animEntries: List<AnimationStore.Entry> = emptyList()
+    private var animEntryIndex = 0
+    private var animFrameIndex = 0
+    private var animFrames: List<GlyphAnimation.Frame> = emptyList()
+
+    private val hideRunnable = Runnable { enterIdle() }
 
     private val tickRunnable = object : Runnable {
         override fun run() {
             if (!visible) return
             refreshDisplay()
             mainHandler.postDelayed(this, TICK_MS)
+        }
+    }
+
+    private val animationRunnable = object : Runnable {
+        override fun run() {
+            if (!visible || section != Section.Animation || animEntries.isEmpty()) {
+                animating = false
+                return
+            }
+            if (animFrames.isEmpty()) {
+                animFrames = animationStore.frames(animEntries[animEntryIndex].id)
+                animFrameIndex = 0
+                if (animFrames.isEmpty()) {
+                    animEntryIndex = (animEntryIndex + 1) % animEntries.size
+                    mainHandler.post(this)
+                    return
+                }
+            }
+            val frame = animFrames[animFrameIndex]
+            animFrameIndex++
+            if (animFrameIndex >= animFrames.size) {
+                animFrameIndex = 0
+                animEntryIndex = (animEntryIndex + 1) % animEntries.size
+                animFrames = animationStore.frames(animEntries[animEntryIndex].id)
+            }
+            matrixManager?.let { manager ->
+                try {
+                    manager.setMatrixFrame(frame.pixels)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Could not draw animation frame", e)
+                }
+            }
+            mainHandler.postDelayed(this, frame.durationMs)
         }
     }
 
@@ -85,9 +131,9 @@ class ShakeClockToyService : Service(), SensorEventListener {
                 return
             }
             if (manager.register(target)) {
-                manager.turnOff()
                 WeatherRepository.refresh(this@ShakeClockToyService)
                 startListening()
+                enterIdle()
             } else {
                 Log.w(TAG, "Glyph Matrix registration failed for $target")
             }
@@ -95,12 +141,13 @@ class ShakeClockToyService : Service(), SensorEventListener {
 
         override fun onServiceDisconnected(componentName: ComponentName?) {
             stopListening()
-            hideDisplay()
+            shutdownDisplay()
         }
     }
 
     override fun onBind(intent: Intent?): IBinder {
         settings = ToySettings(applicationContext)
+        animationStore = AnimationStore(applicationContext)
 
         val manager = GlyphMatrixManager.getInstance(applicationContext)
         matrixManager = manager
@@ -114,8 +161,7 @@ class ShakeClockToyService : Service(), SensorEventListener {
 
     override fun onUnbind(intent: Intent?): Boolean {
         stopListening()
-        hideDisplay()
-        matrixManager?.turnOff()
+        shutdownDisplay()
         matrixManager?.unInit()
         matrixManager = null
         return false
@@ -139,57 +185,94 @@ class ShakeClockToyService : Service(), SensorEventListener {
         if (now - lastShakeAt < SHAKE_COOLDOWN_MS) return
         lastShakeAt = now
 
-        if (visible) {
-            showNextSection()
+        if (windowActive) {
+            advanceSection()
         } else {
-            showDisplay()
+            windowActive = true
+            visible = true
+            section = Section.Time
+            lastRenderedKey = ""
+            refreshDisplay()
         }
+        startWindowTimer()
+        startTicking()
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
 
-    private fun showDisplay() {
-        visible = true
-        displayMode = DisplayMode.TIME
-        lastRenderedKey = ""
-        WeatherRepository.refresh(this)
-        refreshDisplay()
-        armHideTimer()
-        mainHandler.removeCallbacks(tickRunnable)
-        mainHandler.postDelayed(tickRunnable, TICK_MS)
+    private fun enterIdle() {
+        windowActive = false
+        mainHandler.removeCallbacks(hideRunnable)
+        when (settings.idleMode) {
+            IdleMode.OFF -> {
+                visible = false
+                stopAnimation()
+                mainHandler.removeCallbacks(tickRunnable)
+                matrixManager?.turnOff()
+            }
+
+            IdleMode.ANIMATION -> {
+                if (animationStore.selectedEntries().isEmpty()) {
+                    visible = false
+                    stopAnimation()
+                    mainHandler.removeCallbacks(tickRunnable)
+                    matrixManager?.turnOff()
+                } else {
+                    visible = true
+                    section = Section.Animation
+                    lastRenderedKey = ""
+                    refreshDisplay()
+                    startTicking()
+                }
+            }
+
+            IdleMode.PERSISTENT -> {
+                visible = true
+                refreshDisplay()
+                startTicking()
+            }
+        }
     }
 
-    private fun hideDisplay() {
+    private fun shutdownDisplay() {
+        windowActive = false
         visible = false
         lastRenderedKey = ""
         mainHandler.removeCallbacks(hideRunnable)
         mainHandler.removeCallbacks(tickRunnable)
+        stopAnimation()
         matrixManager?.turnOff()
     }
 
-    private fun armHideTimer() {
+    private fun startWindowTimer() {
         mainHandler.removeCallbacks(hideRunnable)
         mainHandler.postDelayed(hideRunnable, DISPLAY_DURATION_MS)
     }
 
-    private fun showNextSection() {
-        val sections = availableSections()
-        if (sections.isEmpty()) {
-            hideDisplay()
-            return
-        }
-        val index = sections.indexOf(displayMode)
-        displayMode = sections[(index + 1) % sections.size]
-        lastRenderedKey = ""
-        refreshDisplay()
-        armHideTimer()
+    private fun startTicking() {
+        mainHandler.removeCallbacks(tickRunnable)
+        mainHandler.postDelayed(tickRunnable, TICK_MS)
     }
 
-    private fun availableSections(): List<DisplayMode> {
-        val sections = mutableListOf(DisplayMode.TIME, DisplayMode.DATE)
-        val temperature = WeatherRepository.celsius(this)
-        if (settings.showTemperature && temperature != null) {
-            sections.add(DisplayMode.TEMP)
+    private fun advanceSection() {
+        val sections = availableSections()
+        if (sections.isEmpty()) {
+            shutdownDisplay()
+            return
+        }
+        val index = sections.indexOf(section)
+        section = sections[(index + 1) % sections.size]
+        lastRenderedKey = ""
+        refreshDisplay()
+    }
+
+    private fun availableSections(): List<Section> {
+        val sections = mutableListOf<Section>(Section.Time, Section.Date)
+        if (settings.showTemperature && WeatherRepository.celsius(this) != null) {
+            sections.add(Section.Temperature)
+        }
+        if (animationStore.selectedEntries().isNotEmpty()) {
+            sections.add(Section.Animation)
         }
         return sections
     }
@@ -197,16 +280,56 @@ class ShakeClockToyService : Service(), SensorEventListener {
     private fun refreshDisplay() {
         if (!visible) return
         val manager = matrixManager ?: return
-        when (displayMode) {
-            DisplayMode.TIME -> if (settings.clockFace == ClockFace.ANALOG) {
-                renderAnalogClock(manager)
-            } else {
-                renderDigitalClock(manager)
+        when (section) {
+            is Section.Time -> {
+                stopAnimation()
+                if (settings.clockFace == ClockFace.ANALOG) {
+                    renderAnalogClock(manager)
+                } else {
+                    renderDigitalClock(manager)
+                }
             }
 
-            DisplayMode.DATE -> renderDate(manager)
-            DisplayMode.TEMP -> renderTemperature(manager)
+            is Section.Date -> {
+                stopAnimation()
+                renderDate(manager)
+            }
+
+            is Section.Temperature -> {
+                stopAnimation()
+                renderTemperature(manager)
+            }
+
+            is Section.Animation -> startAnimation()
         }
+    }
+
+    private fun startAnimation() {
+        val entries = animationStore.selectedEntries()
+        if (entries.isEmpty()) {
+            stopAnimation()
+            return
+        }
+        if (animating && entries == animEntries) return
+        animEntries = entries
+        animEntryIndex = 0
+        animFrameIndex = 0
+        animFrames = animationStore.frames(entries[0].id)
+        if (!animating) {
+            animating = true
+            mainHandler.post(animationRunnable)
+        }
+    }
+
+    private fun stopAnimation() {
+        if (animating || animEntries.isNotEmpty()) {
+            animating = false
+            mainHandler.removeCallbacks(animationRunnable)
+        }
+        animEntries = emptyList()
+        animFrames = emptyList()
+        animEntryIndex = 0
+        animFrameIndex = 0
     }
 
     private fun renderDigitalClock(manager: GlyphMatrixManager) {
